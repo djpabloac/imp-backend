@@ -6,10 +6,11 @@ import { ProductType, } from 'types/product.types';
 const ProductRoute = new Router();
 
 ProductRoute.get(
-  '/alls',
+  '/alls/:search',
   async (req, res): Promise<Response> => {
     try {
-      const response = await ProductController.get();
+      const { search, }: { search: string; } = req.params;
+      const response = await ProductController.get(search);
 
       return res.json({ data: response, success: true, });
     } catch (error) {
@@ -71,6 +72,32 @@ ProductRoute.del(
       return res.json({ data: 'Deleted success', success: true, });
     } catch (error) {
       throw error;
+    }
+  }
+);
+
+ProductRoute.get(
+  '/bycategory',
+  async (req, res): Promise<Response> => {
+    try {
+      const response = await ProductController.getProductsByCategory();
+
+      return res.json({ data: response, success: true, });
+    } catch (error) {
+      return res.json({ data: [], success: false, });
+    }
+  }
+);
+
+ProductRoute.get(
+  '/bystatus',
+  async (req, res): Promise<Response> => {
+    try {
+      const response = await ProductController.getProductsByStatus();
+
+      return res.json({ data: response, success: true, });
+    } catch (error) {
+      return res.json({ data: [], success: false, });
     }
   }
 );

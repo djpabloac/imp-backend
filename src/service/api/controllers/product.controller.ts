@@ -1,13 +1,29 @@
 import ProductModel from 'datalayer/models/mongo/product.models';
 import { ProductType, } from 'types/product.types';
+import { DashboardType, } from 'types/dashboard.types';
 import { readExcelToData, } from 'utils';
 
 class BaseController {
-  async get() {
-    const columns = { financialCost: 0, minPrice: 0, };
-    const products = await ProductModel.find().select(columns).lean();
+  async get(search: string) {
+    const columns = { _id: 1, description: 1, name: 1, partNumber: 1, photo450: 1, price: 1, };
 
-    return products;
+    if(search) {
+      const products = await ProductModel.find({ $or: [
+        { name: { $options: 'i', $regex: search, }, },
+        { 'category.name': { $options: 'i', $regex: search, }, },
+        { 'line.name': { $options: 'i', $regex: search, }, },
+        { code: { $options: 'i', $regex: search, }, },
+        { partNumber: { $options: 'i', $regex: search, }, },
+        { description: { $options: 'i', $regex: search, }, },
+      ], }).select(columns).lean().limit(20);
+
+      return products;
+    }
+    else {
+      const products = await ProductModel.find({}).select(columns).lean().limit(20);
+
+      return products;
+    }
   }
 
   async getById(id: string) {
@@ -47,6 +63,56 @@ class BaseController {
     } catch (error) {
       throw error;
     }
+  }
+
+  async getProductsByCategory() {
+    const categories = await ProductModel.aggregate([
+      {
+        $group: {
+          _id  : '$category.name',
+          count: { $sum: 1, },
+        },
+      },
+      {
+        $sort: {
+          count: -1,
+        },
+      },
+    ]);
+
+    const productsByCategory: DashboardType[] = [];
+    for (const category of categories)
+      productsByCategory.push({
+        argument: category._id,
+        count   : category.count,
+      });
+
+    return productsByCategory;
+  }
+
+  async getProductsByStatus() {
+    const status = await ProductModel.aggregate([
+      {
+        $group: {
+          _id  : '$status',
+          count: { $sum: 1, },
+        },
+      },
+      {
+        $sort: {
+          count: -1,
+        },
+      },
+    ]);
+
+    const productsByCategory: DashboardType[] = [];
+    for (const state of status)
+      productsByCategory.push({
+        argument: state._id,
+        count   : state.count,
+      });
+
+    return productsByCategory;
   }
 
   async migrate() {
